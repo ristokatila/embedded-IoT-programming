@@ -1,0 +1,5 @@
+Use ble_app_uart example as template for the project
+Initialize float32_t xyz_orientation array size of 3 32 bit floats
+Function for getting the BMI-data --> get_bmi160_fifo_data
+Sampling frequency set to 200 Hz to get more frequent update
+

@@ -1,5 +1,9 @@
 Use ble_app_uart example as template for the project
+Compiler define is needed for ARM_MATH_CM4 for arm_math library
+Added BMI-master files to project and to the include path
+Added nrf_drv_spi.c from integration/legacy to project folder 
+Added nrf_drv_spim.c from modules\nrfx\drivers\src\nrfx_spim.c
+Set spi priority to 4 in sdk_config.h
 Initialize float32_t xyz_orientation array size of 3 32 bit floats
 Function for getting the BMI-data --> get_bmi160_fifo_data
-Sampling frequency set to 200 Hz to get more frequent update
-
+Sampling frequency set to 200 Hz to get more frequent updates

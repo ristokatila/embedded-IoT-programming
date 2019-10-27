@@ -89,9 +89,9 @@
 #include "nrf_drv_gpiote.h"
 
 // LOGGING
-#include "nrf_log.h"
-#include "nrf_log_ctrl.h"
-#include "nrf_log_default_backends.h"
+// #include "nrf_log.h"
+// #include "nrf_log_ctrl.h"
+// #include "nrf_log_default_backends.h"
 
 #include "arm_math.h"
 
@@ -109,6 +109,8 @@ float32_t xyz_orientation[3];
 
 static volatile bool spi_xfer_done; 
 static uint8_t SPI_RX_Buffer[200]; // Allocate a buffer for SPI reads
+static const nrf_drv_spi_t spi = NRF_DRV_SPI_INSTANCE(SPI_INSTANCE);
+
 struct bmi160_dev sensor; // An instance of bmi160 sensor
 struct bmi160_sensor_data acc_data[28];
 
@@ -119,7 +121,7 @@ uint8_t fifo_buff[200];
 // BLE DEFINES
 #define APP_BLE_CONN_CFG_TAG            1                                           /**< A tag identifying the SoftDevice BLE configuration. */
 
-#define DEVICE_NAME                     "BMI-ORIENTATION"                               /**< Name of device. Will be included in the advertising data. */
+#define DEVICE_NAME                     "BMI"                               /**< Name of device. Will be included in the advertising data. */
 #define NUS_SERVICE_UUID_TYPE           BLE_UUID_TYPE_VENDOR_BEGIN                  /**< UUID type for the Nordic UART Service (vendor specific). */
 
 #define APP_BLE_OBSERVER_PRIO           3                                           /**< Application's BLE observer priority. You shouldn't need to modify this value. */
@@ -188,20 +190,20 @@ return err_code;
 int8_t bmi160_spi_bus_write(uint8_t hw_addr, uint8_t reg_addr, uint8_t *reg_data,
 uint16_t cnt)
 {
-	spi_xfer_done = false; // set the flag down during transfer
-	int32_t error = 0;
-	// Allocate array, which lenght is address + number of data bytes to be sent
-	uint8_t tx_buff[cnt+1];
-	uint16_t stringpos;
-	// AND address with 0111 1111; set msb to '0' (write operation)
-	 tx_buff[0] = reg_addr & 0x7F;
-	for (stringpos = 0; stringpos < cnt; stringpos++) {
-	 tx_buff[stringpos+1] = *(reg_data + stringpos);
-	}
-	// Do the actual SPI transfer
-	 nrf_drv_spi_transfer(&spi, tx_buff, cnt+1, NULL, 0);
-	while (!spi_xfer_done) {}; // Loop until the transfer is complete
-	return (int8_t)error;
+spi_xfer_done = false; // set the flag down during transfer
+int32_t error = 0;
+// Allocate array, which lenght is address + number of data bytes to be sent
+uint8_t tx_buff[cnt+1];
+uint16_t stringpos;
+// AND address with 0111 1111; set msb to '0' (write operation)
+ tx_buff[0] = reg_addr & 0x7F;
+for (stringpos = 0; stringpos < cnt; stringpos++) {
+ tx_buff[stringpos+1] = *(reg_data + stringpos);
+}
+// Do the actual SPI transfer
+ nrf_drv_spi_transfer(&spi, tx_buff, cnt+1, NULL, 0);
+while (!spi_xfer_done) {}; // Loop until the transfer is complete
+return (int8_t)error;
 }
 
 /**
@@ -241,16 +243,16 @@ sensor.delay_ms = nrf_delay_ms;
 rslt = bmi160_init(&sensor);
 	
 // Configure the accelerometer's sampling freq, range and modes
-sensor.accel_cfg.odr= BMI160_ACCEL_ODR_200HZ;   // Sampling frequency set to 200 Hz to get more frequent update
-sensor.accel_cfg.range= BMI160_ACCEL_RANGE_8G;
-sensor.accel_cfg.bw= BMI160_ACCEL_BW_NORMAL_AVG4;
-sensor.accel_cfg.power= BMI160_ACCEL_NORMAL_MODE;
+sensor.accel_cfg.odr = BMI160_ACCEL_ODR_200HZ;   // Sampling frequency set to 200 Hz to get more frequent update
+sensor.accel_cfg.range = BMI160_ACCEL_RANGE_8G;
+sensor.accel_cfg.bw = BMI160_ACCEL_BW_NORMAL_AVG4;
+sensor.accel_cfg.power = BMI160_ACCEL_NORMAL_MODE;
 
 // Set the configurations
 rslt= bmi160_set_sens_conf(&sensor);
 
 // Some fifo settings
-fifo_frame.data= fifo_buff;
+fifo_frame.data = fifo_buff;
 fifo_frame.length = 200;
 sensor.fifo = &fifo_frame;
 
@@ -261,33 +263,33 @@ rslt= bmi160_set_fifo_config(BMI160_FIFO_ACCEL, BMI160_ENABLE,&sensor);
 struct bmi160_int_settg int_config;
 
 // Interrupt channel/pin 1
-int_config.int_channel= BMI160_INT_CHANNEL_1;
+int_config.int_channel = BMI160_INT_CHANNEL_1;
 
 // Choosing fifo watermark interrupt
-int_config.int_type= BMI160_ACC_GYRO_FIFO_WATERMARK_INT;
+int_config.int_type = BMI160_ACC_GYRO_FIFO_WATERMARK_INT;
 
 // Set fifo watermark level to 180
-rslt= bmi160_set_fifo_wm((uint8_t)180,&sensor);
+rslt = bmi160_set_fifo_wm((uint8_t)180,&sensor);
 // Enabling interrupt pins to act as output pin
-int_config.int_pin_settg.output_en= BMI160_ENABLE;
+int_config.int_pin_settg.output_en = BMI160_ENABLE;
 
 // Choosing push-pull mode for interrupt pin
-int_config.int_pin_settg.output_mode= BMI160_DISABLE;
+int_config.int_pin_settg.output_mode = BMI160_DISABLE;
 
 // Choosing active high output
-int_config.int_pin_settg.output_type= BMI160_ENABLE;
+int_config.int_pin_settg.output_type = BMI160_ENABLE;
 
 // Choosing edge triggered output
-int_config.int_pin_settg.edge_ctrl= BMI160_ENABLE;
+int_config.int_pin_settg.edge_ctrl = BMI160_ENABLE;
 
 // Disabling interrupt pin to act as input
-int_config.int_pin_settg.input_en= BMI160_DISABLE;
+int_config.int_pin_settg.input_en = BMI160_DISABLE;
 
 // Non-latched output
-int_config.int_pin_settg.latch_dur= BMI160_LATCH_DUR_NONE;
+int_config.int_pin_settg.latch_dur = BMI160_LATCH_DUR_NONE;
 
 // Enabling FIFO watermark interrupt
-int_config.fifo_WTM_int_en= BMI160_ENABLE;
+int_config.fifo_WTM_int_en = BMI160_ENABLE;
 
 // Set interrupt configurations
 rslt= bmi160_set_int_config(&int_config,&sensor);
@@ -295,21 +297,33 @@ rslt= bmi160_set_int_config(&int_config,&sensor);
 return rslt;
 }
 
+float32_t calculate_angle(float32_t *v)
+{
+	float32_t angle;
+	float32_t t;
+	float32_t *o = xyz_orientation;
+	float32_t len_v = sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+	float32_t len_o = sqrt(o[0]*o[0]+o[1]*o[1]+o[2]*o[2]);
+	float32_t dp = v[0]*o[0] + v[1]*o[1] + v[2]*o[2];
+	t = dp / (len_v * len_o);
+	angle = acos(t);
+	return angle;
+}
+
 int8_t get_bmi160_fifo_data()
 {
-uint32_t error_code;
 float32_t x_axis = 0;
 float32_t y_axis = 0;
 float32_t z_axis = 0;
 int8_t rslt = BMI160_OK;
 
-uint8_t acc_frames_req=28;
+uint8_t acc_frames_req = 28;
 
 // Read the fifo buffer using SPI    
-rslt= bmi160_get_fifo_data(&sensor);
+rslt = bmi160_get_fifo_data(&sensor);
 
 // Parse the data and extract 28 accelerometer frames
-rslt= bmi160_extract_accel(acc_data,&acc_frames_req,&sensor);
+rslt = bmi160_extract_accel(acc_data,&acc_frames_req,&sensor);
 
 for (uint8_t i = 0; i < acc_frames_req; i++) {
      x_axis += acc_data[i].x;
@@ -325,14 +339,16 @@ vectors[0] = x_axis;
 vectors[1] = y_axis;
 vectors[2] = z_axis;
 
-if(fabs(calculate_angle(vector))> 0.2)
+if(fabs(calculate_angle(vectors))> 0.2)
 {
+	uint32_t err_code;
 	char buffer[40];
-	int ret = snprintf(buffer, sizeof(buffer), "X: %.2f, Y: %.2f, Z: %.2f", x, y, z);
+	int ret = snprintf(buffer, sizeof(buffer), "X: %.2f, Y: %.2f, Z: %.2f", x_axis, y_axis, z_axis);
 	xyz_orientation[0] = x_axis;
 	xyz_orientation[1] = y_axis;
 	xyz_orientation[2] = z_axis;
 	err_code = ble_nus_data_send(&m_nus, (uint8_t*) buffer, (uint16_t*) &ret, m_conn_handle);
+	APP_ERROR_CHECK(err_code);
 }
 
 return rslt;
@@ -340,7 +356,7 @@ return rslt;
 
 void interrupt_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
 {
- uint8_t data=get_bmi160_fifo_data();
+ uint8_t data = get_bmi160_fifo_data();
 }
 
 uint32_t config_gpio()
@@ -449,8 +465,8 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
     {
         uint32_t err_code;
 
-        NRF_LOG_DEBUG("Received data from BLE NUS. Writing data on UART.");
-        NRF_LOG_HEXDUMP_DEBUG(p_evt->params.rx_data.p_data, p_evt->params.rx_data.length);
+        // NRF_LOG_DEBUG("Received data from BLE NUS. Writing data on UART.");
+        // NRF_LOG_HEXDUMP_DEBUG(p_evt->params.rx_data.p_data, p_evt->params.rx_data.length);
 
         for (uint32_t i = 0; i < p_evt->params.rx_data.length; i++)
         {
@@ -459,7 +475,7 @@ static void nus_data_handler(ble_nus_evt_t * p_evt)
                 err_code = app_uart_put(p_evt->params.rx_data.p_data[i]);
                 if ((err_code != NRF_SUCCESS) && (err_code != NRF_ERROR_BUSY))
                 {
-                    NRF_LOG_ERROR("Failed receiving NUS message. Error 0x%x. ", err_code);
+                    // NRF_LOG_ERROR("Failed receiving NUS message. Error 0x%x. ", err_code);
                     APP_ERROR_CHECK(err_code);
                 }
             } while (err_code == NRF_ERROR_BUSY);
@@ -610,7 +626,7 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
     switch (p_ble_evt->header.evt_id)
     {
         case BLE_GAP_EVT_CONNECTED:
-            NRF_LOG_INFO("Connected");
+            // NRF_LOG_INFO("Connected");
             err_code = bsp_indication_set(BSP_INDICATE_CONNECTED);
             APP_ERROR_CHECK(err_code);
             m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
@@ -619,14 +635,14 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             break;
 
         case BLE_GAP_EVT_DISCONNECTED:
-            NRF_LOG_INFO("Disconnected");
+            // NRF_LOG_INFO("Disconnected");
             // LED indication will be changed when advertising starts.
             m_conn_handle = BLE_CONN_HANDLE_INVALID;
             break;
 
         case BLE_GAP_EVT_PHY_UPDATE_REQUEST:
         {
-            NRF_LOG_DEBUG("PHY update request.");
+            // NRF_LOG_DEBUG("PHY update request.");
             ble_gap_phys_t const phys =
             {
                 .rx_phys = BLE_GAP_PHY_AUTO,
@@ -701,11 +717,11 @@ void gatt_evt_handler(nrf_ble_gatt_t * p_gatt, nrf_ble_gatt_evt_t const * p_evt)
     if ((m_conn_handle == p_evt->conn_handle) && (p_evt->evt_id == NRF_BLE_GATT_EVT_ATT_MTU_UPDATED))
     {
         m_ble_nus_max_data_len = p_evt->params.att_mtu_effective - OPCODE_LENGTH - HANDLE_LENGTH;
-        NRF_LOG_INFO("Data len is set to 0x%X(%d)", m_ble_nus_max_data_len, m_ble_nus_max_data_len);
+        // NRF_LOG_INFO("Data len is set to 0x%X(%d)", m_ble_nus_max_data_len, m_ble_nus_max_data_len);
     }
-    NRF_LOG_DEBUG("ATT MTU exchange completed. central 0x%x peripheral 0x%x",
-                  p_gatt->att_mtu_desired_central,
-                  p_gatt->att_mtu_desired_periph);
+    // NRF_LOG_DEBUG("ATT MTU exchange completed. central 0x%x peripheral 0x%x",
+                  // p_gatt->att_mtu_desired_central,
+                  // p_gatt->att_mtu_desired_periph);
 }
 
 
@@ -785,8 +801,8 @@ void uart_event_handle(app_uart_evt_t * p_event)
             {
                 if (index > 1)
                 {
-                    NRF_LOG_DEBUG("Ready to send data over BLE NUS");
-                    NRF_LOG_HEXDUMP_DEBUG(data_array, index);
+                    // NRF_LOG_DEBUG("Ready to send data over BLE NUS");
+                    // NRF_LOG_HEXDUMP_DEBUG(data_array, index);
 
                     do
                     {
@@ -897,9 +913,7 @@ static void buttons_leds_init(bool * p_erase_bonds)
     *p_erase_bonds = (startup_event == BSP_EVENT_CLEAR_BONDING_DATA);
 }
 
-
-/**@brief Function for initializing the nrf log module.
- */
+/**************************************************************************
 static void log_init(void)
 {
     ret_code_t err_code = NRF_LOG_INIT(NULL);
@@ -908,9 +922,11 @@ static void log_init(void)
     NRF_LOG_DEFAULT_BACKENDS_INIT();
 }
 
+**************************************************************************/ 
 
 /**@brief Function for initializing power management.
  */
+
 static void power_management_init(void)
 {
     ret_code_t err_code;
@@ -925,7 +941,7 @@ static void power_management_init(void)
  */
 static void idle_state_handle(void)
 {
-    if (NRF_LOG_PROCESS() == false)
+    // if (NRF_LOG_PROCESS() == false)
     {
         nrf_pwr_mgmt_run();
     }
@@ -950,7 +966,7 @@ int main(void)
 
     // Initialize.
     uart_init();
-    log_init();
+    // log_init();
     timers_init();
     buttons_leds_init(&erase_bonds);
     power_management_init();
@@ -963,7 +979,7 @@ int main(void)
 
     // Start execution.
     printf("\r\nUART started.\r\n");
-    NRF_LOG_INFO("Debug logging for UART over RTT started.");
+    // NRF_LOG_INFO("Debug logging for UART over RTT started.");
     advertising_start();
     
     err_code = spi_config();

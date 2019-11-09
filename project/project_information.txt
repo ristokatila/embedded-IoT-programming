@@ -7,3 +7,5 @@ Set spi priority to 4 in sdk_config.h
 Initialize float32_t xyz_orientation array size of 3 32 bit floats
 Function for getting the BMI-data --> get_bmi160_fifo_data
 Sampling frequency set to 200 Hz to get more frequent updates
+ORIENTATION TIMER set to 5 s and timer start is set to BLE connect event and timer stop is in BLE discconnet event.
+Timer is set as repeated timer sending new message every 5 s with BLE send

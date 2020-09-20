@@ -1,1 +1,1 @@
-# embeded-IoT-programming
+# embedded-IoT-programming
